@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="description" content="אפליקציית OCR לתרגום נוטריוני - הערכת מחיר מיידית">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="נוטריון הוגן">
+    <link rel="manifest" href="manifest.json">
+    <title>אפליקציית OCR - עברית ואנגלית</title>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Heebo', Arial, sans-serif; background:#f5f5f5; min-height:100vh; direction:rtl; padding-bottom:0; margin:0; }
+        .header { background:#2c3e50; color:white; padding:20px; text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.1); flex-shrink:0; }
+        .header h1 { font-size:1.5em; font-weight:600; margin-bottom:5px; }
+        .header p { font-size:0.9em; opacity:0.9; font-weight:300; }
+        .install-banner { background:linear-gradient(135deg,#667eea 0%, #764ba2 100%); color:white; padding:15px 20px; display:none; align-items:center; justify-content:space-between; box-shadow:0 2px 10px rgba(0,0,0,0.2); position:sticky; top:0; z-index:1000; animation:slideDown 0.4s ease-out; }
+        @keyframes slideDown { from { transform:translateY(-100%); opacity:0; } to { transform:translateY(0); opacity:1; } }
+        .install-content { display:flex; align-items:center; gap:15px; flex:1; }
+        .install-icon { font-size:2em; animation:bounce 2s infinite; }
+        @keyframes bounce { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-5px); } }
+        .install-text h3 { font-size:1em; margin-bottom:3px; }
+        .install-text p { font-size:0.85em; opacity:0.9; }
+        .install-actions { display:flex; gap:10px; }
+        .install-btn { background:white; color:#667eea; border:none; padding:10px 20px; border-radius:20px; font-weight:600; cursor:pointer; transition:all 0.3s; font-size:0.9em; }
+        .install-btn:hover { transform:scale(1.05); box-shadow:0 4px 12px rgba(0,0,0,0.2); }
+        .dismiss-btn { background:transparent; color:white; border:1px solid rgba(255,255,255,0.3); }
+        .dismiss-btn:hover { background:rgba(255,255,255,0.1); }
+        .container { max-width:800px; margin:0 auto; padding:20px; padding-bottom:0; flex:1; }
+        .main-title { text-align:center; margin:30px 0; }
+        .main-title h2 { font-size:1.8em; color:#2c3e50; margin-bottom:15px; font-weight:700; }
+        .main-title p { color:#666; font-size:1em; line-height:1.6; }
+        .important-note { background:#fff8e1; border:2px solid #c4a962; border-radius:12px; padding:20px; margin-top:20px; text-align:right; }
+        .important-note p { color:#2c3e50; margin:8px 0; font-size:0.95em; line-height:1.7; }
+        .important-note strong { color:#c4a962; font-size:1.05em; }
+        .upload-card { background:white; border-radius:16px; padding:40px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.08); margin-bottom:30px; border:2px dashed #e0e0e0; transition:all 0.3s; }
+        .upload-card:hover { border-color:#c4a962; box-shadow:0 4px 12px rgba(196,169,98,0.15); }
+        .upload-card.dragover { background:#fafafa; border-color:#c4a962; }
+        .upload-icon { width:80px; height:80px; margin:0 auto 20px; background:#f5f5f5; border-radius:50%; display:flex; align-items:center; justify-content:center; border:3px dashed #ddd; }
+        .upload-icon svg { width:40px; height:40px; stroke:#999; }
+        .upload-card h3 { font-size:1.3em; color:#2c3e50; margin-bottom:10px; font-weight:600; }
+        .upload-card p { color:#999; font-size:0.9em; }
+        .upload-btn { background:#2c3e50; color:white; border:none; padding:14px 40px; border-radius:8px; cursor:pointer; font-size:1em; margin-top:20px; font-weight:600; transition:all 0.3s; }
+        .upload-btn:hover { background:#34495e; transform:translateY(-1px); }
+        #fileInput { display:none; }
+        .info-section { background:white; border-radius:16px; padding:30px; box-shadow:0 2px 8px rgba(0,0,0,0.08); margin-bottom:30px; }
+        .info-section h3 { font-size:1.4em; color:#2c3e50; margin-bottom:25px; text-align:center; font-weight:700; }
+        .feature-item { display:flex; align-items:flex-start; margin-bottom:25px; padding:20px; background:#fafafa; border-radius:12px; }
+        .feature-icon { width:50px; height:50px; min-width:50px; background:white; border-radius:12px; display:flex; align-items:center; justify-content:center; margin-left:15px; box-shadow:0 2px 4px rgba(0,0,0,0.05); }
+        .feature-content h4 { font-size:1.1em; color:#2c3e50; margin-bottom:8px; font-weight:600; }
+        .feature-content p { color:#666; font-size:0.95em; line-height:1.5; }
+        .preview-area { display:none; background:white; border-radius:16px; padding:30px; box-shadow:0 2px 8px rgba(0,0,0,0.08); margin-bottom:20px; }
+        .preview-image { max-width:100%; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+        .progress-bar { width:100%; height:8px; background:#e0e0e0; border-radius:4px; overflow:hidden; margin:20px 0; display:none; }
+        .progress-fill { height:100%; background:#c4a962; width:0%; transition:width 0.3s; }
+        .progress-text { text-align:center; color:#666; margin-top:10px; font-size:0.9em; }
+        .results { display:none; background:white; border-radius:16px; padding:30px; box-shadow:0 2px 8px rgba(0,0,0,0.08); margin-bottom:20px; }
+        .results h3 { font-size:1.3em; color:#2c3e50; margin-bottom:20px; font-weight:600; }
+        .stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:15px; margin-bottom:25px; }
+        .stat-card { background:#fafafa; padding:20px; border-radius:12px; text-align:center; }
+        .stat-label { color:#999; font-size:0.85em; margin-bottom:8px; }
+        .stat-value { color:#2c3e50; font-size:1.5em; font-weight:700; }
+        .text-output { background:#fafafa; padding:25px; border-radius:12px; min-height:400px; max-height:500px; overflow-y:auto; white-space:pre-wrap; word-wrap:break-word; font-family:'Courier New', monospace; font-size:0.95em; line-height:1.6; color:#2c3e50; border:1px solid #e0e0e0; }
+        .text-viewer { background:white; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+        .viewer-controls { display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding:15px; background:#f8f9ff; border-radius:10px; }
+        .viewer-btn { background:#2c3e50; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-size:0.95em; font-weight:600; transition:all 0.3s; }
+        .viewer-btn:hover:not(:disabled) { background:#34495e; transform:translateY(-1px); }
+        .viewer-btn:disabled { background:#ccc; cursor:not-allowed; opacity:0.5; }
+        .page-indicator { font-weight:600; color:#2c3e50; font-size:1em; }
+        .action-buttons { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-top:20px; }
+        .btn { background:white; color:#2c3e50; border:2px solid #e0e0e0; padding:14px 20px; border-radius:8px; cursor:pointer; font-size:0.95em; font-weight:600; transition:all 0.3s; text-align:center; }
+        .btn:hover { background:#2c3e50; color:white; border-color:#2c3e50; transform:translateY(-1px); }
+        .btn-primary { background:#2c3e50; color:white; border-color:#2c3e50; }
+        .btn-primary:hover { background:#34495e; }
+        .error-message { background:#fff5f5; color:#c53030; padding:15px 20px; border-radius:12px; margin:20px 0; display:none; border:1px solid #feb2b2; }
+        .pricing-section { background:#f0f7ff; padding:25px; border-radius:12px; margin:25px 0; border:2px solid #c4a962; }
+        .pricing-section h3 { color:#2c3e50; margin-bottom:20px; font-size:1.4em; }
+        .pricing-section h4 { color:#2c3e50; margin:15px 0 10px 0; font-size:1.1em; }
+        .price-explanation { background:white; padding:20px; border-radius:10px; margin-bottom:20px; }
+        .price-explanation ul { margin:15px 0 10px 20px; line-height:1.8; }
+        .price-explanation li { margin:8px 0; }
+        .service-selector { background:white; padding:20px; border-radius:10px; margin-bottom:20px; }
+        .service-options { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-top:15px; }
+        .service-option { border:2px solid #e0e0e0; border-radius:10px; padding:15px; cursor:pointer; transition:all 0.3s; display:block; }
+        .service-option:hover { border-color:#c4a962; background:#fafafa; }
+        .service-option input[type="radio"] { display:none; }
+        .service-option input[type="radio"]:checked + .option-content { color:#c4a962; }
+        .service-option input[type="radio"]:checked ~ .option-content { border-right:4px solid #c4a962; }
+        .service-option:has(input:checked) { border-color:#c4a962; background:#fffbf0; }
+        .option-content { display:flex; align-items:center; gap:12px; }
+        .option-icon { font-size:2em; }
+        .option-content p { margin:5px 0 0 0; font-size:0.85em; color:#666; }
+        .price-breakdown { background:white; padding:20px; border-radius:10px; margin-bottom:15px; }
+        .breakdown-item { display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid #f0f0f0; }
+        .breakdown-item:last-child { border-bottom:none; }
+        .breakdown-item.subtotal { margin-top:10px; padding-top:15px; border-top:2px solid #e0e0e0; }
+        .breakdown-item.total { background:#fffbf0; padding:15px; margin:10px -20px -20px -20px; border-radius:0 0 10px 10px; font-size:1.2em; color:#c4a962; }
+        .price-note { background:white; padding:15px; border-radius:10px; border-right:4px solid #c4a962; }
+        .price-note ul { margin:10px 0 0 20px; line-height:1.8; }
+        .price-note li { margin:5px 0; font-size:0.9em; }
+        @media (max-width:600px) {
+            .container { padding:15px; }
+            .upload-card { padding:30px 20px; }
+            .main-title h2 { font-size:1.5em; }
+            .stats-grid { grid-template-columns:1fr 1fr; }
+            .install-actions { flex-direction:column; width:100%; }
+            .install-btn { width:100%; }
+            .install-content { flex-direction:column; text-align:center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="install-banner" id="installBanner">
+        <div class="install-content">
+            <div class="install-icon">📱</div>
+            <div class="install-text">
+                <h3>התקן את האפליקציה</h3>
+                <p>גישה מהירה ושימוש אופליין</p>
+            </div>
+        </div>
+        <div class="install-actions">
+            <button class="install-btn" id="installBtn">התקן עכשיו</button>
+            <button class="install-btn dismiss-btn" id="dismissBtn">אולי מאוחר יותר</button>
+        </div>
+    </div>
+
+    <div class="header">
+        <h1>⚖️ נוטריון הוגן אונליין</h1>
+        <p>הערכת עלות לפי חוק</p>
+    </div>
+    
+    <div class="container">
+        <div class="main-title">
+            <h2>הצעת מחיר לתרגום נוטריוני</h2>
+            <p>קבלו הערכת מחיר מיידית ומדויקת, המבוססת על ספירת מילים לפי התעריף הרשמי של משרד המשפטים.</p>
+            <div class="important-note">
+                <p><strong>⚠️ חשוב לדעת:</strong> הכלי מספק הערכת מחיר בלבד, בהתאם לתעריף המינימום הקבוע בחוק הנוטריונים, תשל"ו-1976.</p>
+                <p><strong>התעריף הסופי ייקבע על ידי הנוטריון.</strong> כל הזכויות שמורות © 2025</p>
+            </div>
+        </div>
+        
+        <div class="upload-card" id="uploadArea">
+            <div class="upload-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+            </div>
+            <h3>גרור לכאן את המסמך</h3>
+            <p>או לחץ לבחירה מהמחשב</p>
+            <input type="file" id="fileInput" accept="image/*,.pdf">
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">צרף קובץ</button>
+            <p style="margin-top: 15px; font-size: 0.85em;">PDF, JPG, PNG • עד 10MB</p>
+        </div>
+        
+        <div class="error-message" id="errorMessage"></div>
+        
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText" style="display: none;"></div>
+        
+        <div class="preview-area" id="previewArea">
+            <h3>תצוגה מקדימה:</h3>
+            <img id="previewImage" class="preview-image" alt="Preview">
+        </div>
+        
+        <div class="results" id="results">
+            <h3>תוצאות הניתוח</h3>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">שפה מזוהה</div>
+                    <div class="stat-value" id="detectedLanguage">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">מספר מילים</div>
+                    <div class="stat-value" id="wordCount">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">מספר תווים</div>
+                    <div class="stat-value" id="charCount">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">סוג קובץ</div>
+                    <div class="stat-value" id="fileType">-</div>
+                </div>
+                <div class="stat-card" id="pdfPagesCard" style="display: none;">
+                    <div class="stat-label">מספר עמודים</div>
+                    <div class="stat-value" id="pdfPages">-</div>
+                </div>
+            </div>
+            
+            <div class="pricing-section" id="pricingSection">
+                <h3>💰 הצעת מחיר לתרגום נוטריוני</h3>
+                
+                <div class="price-explanation">
+                    <h4>📋 הסבר על התמחור</h4>
+                    <p>התמחור נקבע לפי <strong>תקנות הנוטריונים (שכר שירותים), תשל"ט-1978</strong> ומעודכן לשנת 2025. המחיר מחושב לפי מספר המילים במסמך:</p>
+                    <ul>
+                        <li><strong>100 המילים הראשונות:</strong> 245 ₪</li>
+                        <li><strong>מילים 101-1,000:</strong> 193 ₪ לכל 100 מילים</li>
+                        <li><strong>מעל 1,000 מילים:</strong> 96 ₪ לכל 100 מילים</li>
+                    </ul>
+                    <p style="margin-top: 10px; font-size: 0.9em; color: #666;">💡 השכר הוא עבור <strong>אישור נכונות התרגום</strong> בלבד. עלות התרגום עצמו נקבעת בנפרד.</p>
+                </div>
+                
+                <div class="service-selector">
+                    <h4>בחר סוג שירות:</h4>
+                    <div class="service-options">
+                        <label class="service-option">
+                            <input type="radio" name="service" value="translation" checked onchange="calculatePrice()">
+                            <div class="option-content">
+                                <span class="option-icon">📄</span>
+                                <div>
+                                    <strong>תרגום נוטריוני</strong>
+                                    <p>אישור נכונות תרגום מסמך</p>
+                                </div>
+                            </div>
+                        </label>
+                        <label class="service-option">
+                            <input type="radio" name="service" value="signature" onchange="calculatePrice()">
+                            <div class="option-content">
+                                <span class="option-icon">✍️</span>
+                                <div>
+                                    <strong>אימות חתימה</strong>
+                                    <p>אישור זהות החותמים על מסמך</p>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="signatureOptions" style="display: none;">
+                    <label style="display: block; margin: 10px 0;">
+                        <strong>מספר חותמים:</strong>
+                        <input type="number" id="numSigners" value="1" min="1" max="10" 
+                               style="width: 80px; padding: 8px; margin-right: 10px; border: 1px solid #ddd; border-radius: 6px;"
+                               onchange="calculatePrice()">
+                    </label>
+                </div>
+                
+                <div class="price-breakdown">
+                    <h4>פירוט עלויות:</h4>
+                    <div class="breakdown-item">
+                        <span>שירות נוטריוני:</span>
+                        <span id="basePrice">-</span>
+                    </div>
+                    <div class="breakdown-item" id="wordBreakdown" style="display: none; font-size: 0.9em; color: #666; border: none; padding: 5px 0;">
+                        <span id="wordCalcDetails"></span>
+                    </div>
+                    <div class="breakdown-item subtotal">
+                        <span><strong>סה"כ לפני מע"מ:</strong></span>
+                        <span id="subtotal"><strong>-</strong></span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span>מע"מ (18%):</span>
+                        <span id="vatAmount">-</span>
+                    </div>
+                    <div class="breakdown-item total">
+                        <span><strong>סה"כ לתשלום:</strong></span>
+                        <span id="totalPrice"><strong>-</strong></span>
+                    </div>
+                </div>
+                
+                <div class="price-note">
+                    <strong>⚖️ חשוב לדעת:</strong>
+                    <ul>
+                        <li>המחירים קבועים בחוק ואחידים לכל הנוטריונים בישראל</li>
+                        <li>הנוטריון אינו רשאי לגבות מחיר שונה מהקבוע בתקנות</li>
+                        <li>התעריפים מתעדכנים ב-1 בינואר מדי שנה לפי מדד המחירים</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h3>הטקסט המזוהה:</h3>
+            <div class="text-viewer">
+                <div class="viewer-controls">
+                    <button class="viewer-btn" onclick="previousPage()" id="prevBtn" disabled>◄ הקודם</button>
+                    <span class="page-indicator">עמוד <span id="currentPage">1</span> מתוך <span id="totalPages">1</span></span>
+                    <button class="viewer-btn" onclick="nextPage()" id="nextBtn">הבא ►</button>
+                </div>
+                <div class="text-output" id="textOutput"></div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn" onclick="downloadAsText()">💾 הורד TXT</button>
+                <button class="btn" onclick="downloadAsWord()">📄 הורד DOC</button>
+                <button class="btn" onclick="copyToClipboard()">📋 העתק</button>
+                <button class="btn btn-primary" onclick="reset()">🔄 קובץ חדש</button>
+            </div>
+        </div>
+        
+        <div class="info-section">
+            <h3>מדוע לבחור בנו?</h3>
+            
+            <div class="feature-item">
+                <div class="feature-icon">📋</div>
+                <div class="feature-content">
+                    <h4>חישוב מדויק</h4>
+                    <p>הערכה מבוססת על התעריף הרשמי והמחייב לפי חוק הנוטריונים.</p>
+                </div>
+            </div>
+            
+            <div class="feature-item">
+                <div class="feature-icon">⚡</div>
+                <div class="feature-content">
+                    <h4>תוצאה מיידית</h4>
+                    <p>קבלו את הערכת המחיר וספירת המילים המדויקת תוך שניות בודדות.</p>
+                </div>
+            </div>
+            
+            <div class="feature-item">
+                <div class="feature-icon">🔒</div>
+                <div class="feature-content">
+                    <h4>פרטיות ובטיחות</h4>
+                    <p>המסמכים שלכם מאובטחים ונמחקים מהשרתים שלנו לצמיתות לאחר העיבוד.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // PWA Installation
+        let deferredPrompt;
+        const installBanner = document.getElementById('installBanner');
+        const installBtn = document.getElementById('installBtn');
+        const dismissBtn = document.getElementById('dismissBtn');
+
+        // Check if already installed
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            console.log('App is already installed');
+        } else {
+            if (!localStorage.getItem('installDismissed')) {
+                setTimeout(() => { installBanner.style.display = 'flex'; }, 3000);
+            }
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            if (!localStorage.getItem('installDismissed')) installBanner.style.display = 'flex';
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                installBanner.style.display = 'none';
+                showSuccessMessage();
+            }
+            deferredPrompt = null;
+        });
+        
+        function showSuccessMessage() {
+            const message = document.createElement('div');
+            message.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #10b981; color: white; padding: 15px 30px; border-radius: 10px; z-index: 10000; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: slideDown 0.3s ease-out;';
+            message.textContent = '✓ האפליקציה הותקנה בהצלחה!';
+            document.body.appendChild(message);
+            setTimeout(() => { message.remove(); }, 3000);
+        }
+
+        dismissBtn.addEventListener('click', () => {
+            installBanner.style.display = 'none';
+            localStorage.setItem('installDismissed', 'true');
+            setTimeout(() => { localStorage.removeItem('installDismissed'); }, 7 * 24 * 60 * 60 * 1000);
+        });
+
+        window.addEventListener('appinstalled', () => {
+            installBanner.style.display = 'none';
+        });
+
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(reg => console.log('SW registered', reg.scope))
+                    .catch(err => console.log('SW failed', err));
+            });
+        }
+
+        // OCR Application Code (unchanged logic)
+        let extractedText = '';
+        let detectedLang = '';
+        let currentFileType = '';
+        let textPages = [];
+        let currentPageIndex = 0;
+        const WORDS_PER_PAGE = 300;
+        
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const previewArea = document.getElementById('previewArea');
+        const previewImage = document.getElementById('previewImage');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const results = document.getElementById('results');
+        const textOutput = document.getElementById('textOutput');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        uploadArea.addEventListener('click', (e) => {
+            if (e.target.tagName !== 'BUTTON') fileInput.click();
+        });
+        uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+        uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault(); uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && (file.type.startsWith('image/') || file.type === 'application/pdf')) handleFile(file);
+            else showError('אנא העלה קובץ תמונה או PDF בלבד');
+        });
+        fileInput.addEventListener('change', (e) => { const f=e.target.files[0]; if (f) handleFile(f); });
+        
+        function handleFile(file) {
+            errorMessage.style.display = 'none';
+            currentFileType = file.type;
+            if (file.type === 'application/pdf') {
+                document.getElementById('fileType').textContent = 'PDF';
+                handlePDF(file);
+            } else {
+                const fileExtension = file.name.split('.').pop().toUpperCase();
+                document.getElementById('fileType').textContent = fileExtension;
+                const reader = new FileReader();
+                reader.onload = (e) => { previewImage.src = e.target.result; previewArea.style.display = 'block'; performOCR(e.target.result); };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        async function handlePDF(file) {
+            progressBar.style.display = 'block';
+            progressText.style.display = 'block';
+            progressFill.style.width = '0%';
+            progressText.textContent = 'טוען PDF...';
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                const numPages = pdf.numPages;
+                document.getElementById('pdfPages').textContent = numPages;
+                document.getElementById('pdfPagesCard').style.display = 'block';
+                let allText = '';
+                for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+                    progressText.textContent = `מעבד עמוד ${pageNum} מתוך ${numPages}...`;
+                    progressFill.style.width = ((pageNum / numPages) * 50) + '%';
+                    const page = await pdf.getPage(pageNum);
+                    const viewport = page.getViewport({ scale: 2.0 });
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+                    if (pageNum === 1) { previewImage.src = canvas.toDataURL(); previewArea.style.display = 'block'; }
+                    const imageData = canvas.toDataURL();
+                    const pageText = await performOCROnImage(imageData, pageNum, numPages);
+                    allText += pageText + '\n\n--- עמוד ' + pageNum + ' ---\n\n';
+                }
+                extractedText = allText.trim();
+                detectLanguage(extractedText);
+                displayResults();
+            } catch (error) {
+                showError('שגיאה בעיבוד קובץ PDF: ' + error.message);
+                progressBar.style.display = 'none';
+                progressText.style.display = 'none';
+            }
+        }
+        
+        async function performOCROnImage(imageData, currentPage, totalPages) {
+            try {
+                const worker = await Tesseract.createWorker({
+                    logger: m => {
+                        if (m.status === 'recognizing text') {
+                            const baseProgress = currentPage ? ((currentPage - 1) / totalPages) * 100 : 0;
+                            const pageProgress = currentPage ? (m.progress / totalPages) * 100 : m.progress * 100;
+                            const totalProgress = Math.round(baseProgress + pageProgress);
+                            progressFill.style.width = totalProgress + '%';
+                            if (!currentPage) { progressText.textContent = `מעבד... ${totalProgress}%`; }
+                        }
+                    }
+                });
+                await worker.loadLanguage('heb+eng');
+                await worker.initialize('heb+eng');
+                const { data: { text } } = await worker.recognize(imageData);
+                await worker.terminate();
+                return text.trim();
+            } catch (error) { throw new Error('שגיאה בזיהוי טקסט: ' + error.message); }
+        }
+        
+        async function performOCR(imageData) {
+            progressBar.style.display = 'block';
+            progressText.style.display = 'block';
+            results.style.display = 'none';
+            try {
+                const text = await performOCROnImage(imageData);
+                extractedText = text;
+                detectLanguage(extractedText);
+                displayResults();
+            } catch (error) {
+                showError('שגיאה בעיבוד התמונה: ' + error.message);
+                progressBar.style.display = 'none';
+                progressText.style.display = 'none';
+            }
+        }
+        
+        function detectLanguage(text) {
+            const hebrewChars = (text.match(/[\u0590-\u05FF]/g) || []).length;
+            const englishChars = (text.match(/[a-zA-Z]/g) || []).length;
+            const totalChars = hebrewChars + englishChars;
+            if (totalChars === 0) detectedLang = 'לא זוהתה';
+            else if (hebrewChars > englishChars) { const p = Math.round((hebrewChars / totalChars) * 100); detectedLang = `עברית ${p}%`; }
+            else { const p = Math.round((englishChars / totalChars) * 100); detectedLang = `English ${p}%`; }
+        }
+        
+        function displayResults() {
+            progressBar.style.display = 'none';
+            progressText.style.display = 'none';
+            results.style.display = 'block';
+            paginateText();
+            document.getElementById('detectedLanguage').textContent = detectedLang;
+            const words = extractedText.split(/\s+/).filter(w => w.length > 0);
+            document.getElementById('wordCount').textContent = words.length.toLocaleString('he-IL');
+            document.getElementById('charCount').textContent = extractedText.length.toLocaleString('he-IL');
+            calculatePrice();
+        }
+        
+        function paginateText() {
+            const words = extractedText.split(/\s+/).filter(w => w.length > 0);
+            textPages = [];
+            for (let i = 0; i < words.length; i += WORDS_PER_PAGE) textPages.push(words.slice(i, i + WORDS_PER_PAGE).join(' '));
+            if (textPages.length === 0) textPages = [extractedText];
+            currentPageIndex = 0;
+            displayCurrentPage();
+        }
+        function displayCurrentPage() {
+            const textOutput = document.getElementById('textOutput');
+            textOutput.textContent = textPages[currentPageIndex];
+            document.getElementById('currentPage').textContent = currentPageIndex + 1;
+            document.getElementById('totalPages').textContent = textPages.length;
+            document.getElementById('prevBtn').disabled = currentPageIndex === 0;
+            document.getElementById('nextBtn').disabled = currentPageIndex === textPages.length - 1;
+        }
+        function nextPage() { if (currentPageIndex < textPages.length - 1) { currentPageIndex++; displayCurrentPage(); } }
+        function previousPage() { if (currentPageIndex > 0) { currentPageIndex--; displayCurrentPage(); } }
+        
+        function calculatePrice() {
+            const words = extractedText.split(/\s+/).filter(w => w.length > 0).length;
+            const serviceType = document.querySelector('input[name="service"]:checked').value;
+            let basePrice = 0;
+            let calcDetails = '';
+            if (serviceType === 'translation') {
+                document.getElementById('signatureOptions').style.display = 'none';
+                document.getElementById('wordBreakdown').style.display = 'block';
+                if (words <= 100) { basePrice = 245; calcDetails = `100 מילים ראשונות: 245 ₪`; }
+                else if (words <= 1000) {
+                    basePrice = 245;
+                    const additionalHundreds = Math.ceil((words - 100) / 100);
+                    const additionalCost = additionalHundreds * 193;
+                    basePrice += additionalCost;
+                    calcDetails = `100 מילים ראשונות: 245 ₪<br>${additionalHundreds} × 100 מילים נוספות: ${additionalCost.toLocaleString('he-IL')} ₪`;
+                } else {
+                    basePrice = 245;
+                    const firstNineHundreds = 9;
+                    const middleCost = firstNineHundreds * 193;
+                    basePrice += middleCost;
+                    const remainingHundreds = Math.ceil((words - 1000) / 100);
+                    const remainingCost = remainingHundreds * 96;
+                    basePrice += remainingCost;
+                    calcDetails = `100 מילים ראשונות: 245 ₪<br>900 מילים נוספות (101-1000): ${middleCost.toLocaleString('he-IL')} ₪<br>${remainingHundreds} × 100 מילים מעל 1000: ${remainingCost.toLocaleString('he-IL')} ₪`;
+                }
+                document.getElementById('wordCalcDetails').innerHTML = calcDetails;
+            } else {
+                document.getElementById('signatureOptions').style.display = 'block';
+                document.getElementById('wordBreakdown').style.display = 'none';
+                const numSigners = parseInt(document.getElementById('numSigners').value) || 1;
+                basePrice = 193;
+                if (numSigners > 1) basePrice += (numSigners - 1) * 75;
+            }
+            const vatAmount = Math.round(basePrice * 0.18);
+            const totalPrice = basePrice + vatAmount;
+            document.getElementById('basePrice').textContent = '₪' + basePrice.toLocaleString('he-IL');
+            document.getElementById('subtotal').textContent = '₪' + basePrice.toLocaleString('he-IL');
+            document.getElementById('vatAmount').textContent = '₪' + vatAmount.toLocaleString('he-IL');
+            document.getElementById('totalPrice').textContent = '₪' + totalPrice.toLocaleString('he-IL');
+        }
+        
+        function downloadAsText() {
+            const blob = new Blob([extractedText], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'ocr-result.txt'; a.click(); URL.revokeObjectURL(url);
+        }
+        function downloadAsWord() {
+            const header = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>OCR Result</title></head><body dir="rtl">';
+            const footer = '</body></html>';
+            const sourceHTML = header + '<pre style="font-family: Arial; white-space: pre-wrap;">' + extractedText.replace(/\n/g, '<br>') + '</pre>' + footer;
+            const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'ocr-result.doc'; a.click(); URL.revokeObjectURL(url);
+        }
+        function copyToClipboard() {
+            navigator.clipboard.writeText(extractedText).then(() => {
+                const btn = event.target; const originalText = btn.textContent;
+                btn.textContent = '✓ הועתק!'; setTimeout(() => { btn.textContent = originalText; }, 2000);
+            });
+        }
+        function reset() {
+            fileInput.value=''; previewArea.style.display='none'; progressBar.style.display='none'; progressText.style.display='none';
+            results.style.display='none'; errorMessage.style.display='none'; document.getElementById('pdfPagesCard').style.display='none';
+            extractedText=''; currentFileType=''; textPages=[]; currentPageIndex=0;
+        }
+        function showError(message) {
+            errorMessage.textContent = message; errorMessage.style.display = 'block';
+            setTimeout(() => { errorMessage.style.display = 'none'; }, 5000);
+        }
+    </script>
+</body>
+</html>
