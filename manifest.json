@@ -1,24 +1,24 @@
 {
-  "name": "נוטריון הוגן אונליין - OCR Notary App",
+  "name": "נוטריון הוגן אונליין",
   "short_name": "נוטריון הוגן",
-  "description": "אפליקציה לזיהוי טקסטים (OCR) והערכת עלויות תרגום נוטריוני לפי החוק.",
-  "start_url": "./index.html",
-  "display": "standalone",
-  "orientation": "portrait",
+  "description": "הערכת מחיר לתרגום נוטריוני, OCR עברית/אנגלית ותמחור לפי תקנות.",
+  "start_url": "./",
   "scope": "./",
-  "background_color": "#2c3e50",
+  "display": "standalone",
   "theme_color": "#2c3e50",
-  "lang": "he",
+  "background_color": "#2c3e50",
   "icons": [
     {
       "src": "icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
